@@ -1,68 +1,49 @@
 import streamlit as st
 import requests
+import time
 
-# Page Custom Styling (Animated Gradient Background)
 st.markdown(
     """
     <style>
-    .stApp {
-        background: linear-gradient(-45deg, #1e1e2f, #2a2a40, #131324, #1f1a3a);
-        background-size: 400% 400%;
-        animation: gradient 15s ease infinite;
-    }
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    h1 {
-        color: #00ffcc !important;
-        text-shadow: 0px 0px 10px rgba(0,255,204,0.5);
-    }
-    .stRadio p { color: #ffffff !important; font-weight: bold; }
+    .stApp { background: linear-gradient(-45deg, #0f172a, #1e1b4b, #311042); background-size: 400% 400%; animation: gradient 15s ease infinite; }
+    @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    h1 { color: #00ffcc !important; text-shadow: 0px 0px 10px rgba(0,255,204,0.5); }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-st.title("🤖 MT5 Automated Trading Bot")
+st.title("🤖 SMC Fully Automated Bot")
 
-# Sidebar Controls
-st.sidebar.header("Bot Controls")
-status = st.sidebar.radio("Bot State:", ("Stopped", "Running"))
+st.sidebar.header("Bot Configuration")
+NGROK_URL = st.sidebar.text_input("Enter PC Bridge URL (Ngrok):", "https://ngrok-free.dev")
+trade_mode = st.sidebar.radio("Select Working Mode:", ("Manual", "Fully Automated 🚀"))
+symbol_to_trade = st.sidebar.selectbox("Select Symbol:", ("EURUSD", "GBPUSD", "XAUUSD"))
 
-# Ngrok URL Box (Is mein hum aap ka pc link dalein ge)
-NGROK_URL = st.sidebar.text_input("Enter PC Bridge URL (Ngrok):", "https://ngrok-free.app")
-
-if status == "Running":
-    st.success("Bot status: Active and listening for signals...")
+if trade_mode == "Fully Automated 🚀":
+    st.success(f"Automation Active: Analyzing pichli 100 candles for {symbol_to_trade}...")
     
-    # Trading Panel Layout
-    st.subheader("📊 Manual Execution Panel")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🟢 BUY NOW", use_container_width=True):
-            with st.spinner("Sending BUY order..."):
-                try:
-                    response = requests.post(f"{NGROK_URL}/trade", json={"action": "BUY", "symbol": "EURUSD", "lot": 0.01}, timeout=10)
-                    if response.status_code == 200:
-                        st.success("BUY Order Executed!")
+    # Automated loop trigger box
+    if st.button("Start Auto Scan Loop"):
+        st.info("Scanner loop started. Checking market structure every 15 seconds. Do not close this tab.")
+        placeholder = st.empty()
+        
+        while True:
+            try:
+                response = requests.post(f"{NGROK_URL}/auto_trade", json={"symbol": symbol_to_trade}, timeout=10)
+                res_data = response.json()
+                
+                with placeholder.container():
+                    st.write(f"🔄 Last Scan Time: {time.strftime('%H:%M:%S')}")
+                    if "Executed" in res_data.get('message', ''):
+                        st.success(f"🔥 Alert: {res_data.get('message')}")
                     else:
-                        st.error(f"Failed: {response.text}")
-                except Exception as e:
-                    st.error(f"Connection Error: {e}")
-                    
-    with col2:
-        if st.button("🔴 SELL NOW", use_container_width=True):
-            with st.spinner("Sending SELL order..."):
-                try:
-                    response = requests.post(f"{NGROK_URL}/trade", json={"action": "SELL", "symbol": "EURUSD", "lot": 0.01}, timeout=10)
-                    if response.status_code == 200:
-                        st.success("SELL Order Executed!")
-                    else:
-                        st.error(f"Failed: {response.text}")
-                except Exception as e:
-                    st.error(f"Connection Error: {e}")
+                        st.warning(f"Status: {res_data.get('message')}")
+                        
+            except Exception as e:
+                st.error(f"Scanner Connection Error: {e}")
+                
+            time.sleep(15) # Har 15 seconds baad auto-check kare ga
 else:
-    st.warning("Bot status: Paused. Turn on 'Running' from sidebar to trade.")
+    st.warning("Manual mode active. Automation is currently paused.")
+
